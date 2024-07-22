@@ -1,4 +1,4 @@
-const fs = require('fs');
+    const fs = require('fs');
 const asar = require('@electron/asar');
 const crypto = require('crypto');
 const yargs = require('yargs/yargs');
@@ -25,11 +25,24 @@ function patchExecutable(exePath, newHash, outputPath) {
     console.info(`[+] Try to patch binary ${exePath}`);
     try {
         const binaryData = fs.readFileSync(exePath);
-        const pattern = /(?<="value":")[a-f0-9]{64}(?=")/g;
-        const newBinaryData = binaryData.toString().replace(pattern, newHash);
-        fs.writeFileSync(outputPath, newBinaryData, 'binary');
+        const newHashBuffer = Buffer.from(newHash, 'utf8');
+        const pattern = /"value":"[a-f0-9]{64}"/g;
+        const binaryString = binaryData.toString('utf8');
+        const match = pattern.exec(binaryString);
+
+        if (!match) {
+            console.error('No matching hash found in the binary data.');
+            return;
+        }
+
+        const matchStart = match.index + 8;
+        const matchEnd = matchStart + 64;
+
+        newHashBuffer.copy(binaryData, matchStart);
+
+        fs.writeFileSync(outputPath, binaryData);
         console.info('[+] File patched successfully.');
-        console.log(`[+] Patched binary saved to ${outputPath}`)
+        console.log(`[+] Patched binary saved to ${outputPath}`);
     } catch (error) {
         console.error('Error patching the executable:', error.message);
     }
